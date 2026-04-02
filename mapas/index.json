@@ -1,0 +1,14 @@
+[
+  {
+    "id":    "dm_demo",
+    "name":  "DM Demo",
+    "file":  "mapas/dm_demo.json",
+    "modes": ["deathmatch"]
+  },
+  {
+    "id":    "mapa_prueba",
+    "name":  "Mapa Prueba",
+    "file":  "mapas/mapa_prueba.json",
+    "modes": ["deathmatch"]
+  }
+]

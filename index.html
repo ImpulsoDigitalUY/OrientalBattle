@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Oriental Battle</title>
+    <link rel="stylesheet" href="styles/main.css" />
+
+    <!-- Three.js via importmap (no bundler needed) -->
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "https://cdn.jsdelivr.net/npm/three@0.162.0/build/three.module.js"
+        }
+      }
+    </script>
+  </head>
+  <body>
+    <canvas id="gameCanvas"></canvas>
+
+    <!-- HUD deathmatch (timer + kills en la partida) -->
+    <div id="dm-hud" class="hidden">
+      <span id="dm-kills">0 / 30</span>
+      <span id="dm-sep">│</span>
+      <span id="dm-timer">5:00</span>
+    </div>
+
+    <!-- Scoreboard (Tab) -->
+    <div id="dm-scoreboard" class="hidden">
+      <h2>MARCADOR</h2>
+      <table>
+        <thead><tr><th>Jugador</th><th>Kills</th><th>Muertes</th></tr></thead>
+        <tbody id="dm-sb-body"></tbody>
+      </table>
+    </div>
+
+    <!-- Pantalla de muerte / reaparición -->
+    <div id="dm-death" class="hidden">
+      <p class="dm-death-title">ELIMINADO</p>
+      <p class="dm-death-sub">Reapareciendo en <span id="dm-respawn-count">3</span>...</p>
+    </div>
+
+    <!-- Pantalla de fin de partida -->
+    <div id="dm-gameover" class="hidden">
+      <h1 id="dm-go-title"></h1>
+      <table id="dm-go-table">
+        <thead><tr><th>Jugador</th><th>Kills</th><th>Muertes</th></tr></thead>
+        <tbody id="dm-go-body"></tbody>
+      </table>
+      <button id="dm-go-btn">Jugar de nuevo</button>
+    </div>
+
+    <!-- Overlay: menú principal / pausa -->
+    <div id="overlay">
+
+      <!-- ── Menú principal ── -->
+      <div id="menu-main">
+        <h1>Oriental Battle</h1>
+        <div id="menu-buttons">
+          <button id="btn-play">▶ &nbsp;Jugar</button>
+          <button id="btn-settings">⚙ &nbsp;Configuración</button>
+          <button id="btn-dev" class="btn-dev-mode">🛠 &nbsp;Dev</button>
+        </div>
+        <ul class="controls-hint">
+          <li><kbd>W A S D</kbd> — Mover</li>
+          <li><kbd>Espacio</kbd> — Saltar</li>
+          <li><kbd>Shift</kbd> — Caminar (silencioso)</li>
+          <li><kbd>Ctrl</kbd> — Agacharse</li>
+          <li><kbd>Ratón</kbd> — Apuntar</li>
+          <li><kbd>Esc</kbd> — Pausa</li>
+          <li><kbd>Tab</kbd> — Marcador</li>
+        </ul>
+      </div>
+
+      <!-- ── Menú Jugar ── -->
+      <div id="menu-play" class="hidden">
+        <h2>Jugar</h2>
+
+        <div class="play-section">
+          <p class="play-section-label">MODO DE JUEGO</p>
+          <div class="play-option-list">
+            <button class="mode-btn selected" data-mode="deathmatch">⚔ &nbsp;Deathmatch</button>
+          </div>
+        </div>
+
+        <div class="play-section">
+          <p class="play-section-label">MAPA</p>
+          <div id="map-list">
+            <span class="map-loading">Cargando mapas…</span>
+          </div>
+        </div>
+
+        <div class="play-actions">
+          <button id="btn-start-game" disabled>▶ &nbsp;Comenzar</button>
+          <button id="btn-play-back">← &nbsp;Volver</button>
+        </div>
+      </div>
+
+      <!-- ── Menú Dev ── -->
+      <div id="menu-dev" class="hidden">
+        <h2>Modo Desarrollador</h2>
+        <p class="dev-desc">Herramientas de desarrollo</p>
+        <div id="dev-tool-list">
+          <button id="btn-dev-map">🗺 &nbsp;Editor de Mapas</button>
+          <button id="btn-dev-weapon">🔫 &nbsp;Editor de Armas</button>
+        </div>
+        <button id="btn-dev-back">← &nbsp;Volver</button>
+      </div>
+
+      <!-- ── Pantalla de configuración ── -->
+      <div id="menu-settings" class="hidden">
+        <h2>Configuración</h2>
+
+        <div class="setting-row">
+          <label for="vol-master">Volumen general</label>
+          <input type="range" id="vol-master" min="0" max="100" value="80" />
+          <span class="vol-value" id="vol-master-val">80</span>
+        </div>
+
+        <div class="setting-row">
+          <label for="vol-sfx">Efectos de sonido</label>
+          <input type="range" id="vol-sfx" min="0" max="100" value="80" />
+          <span class="vol-value" id="vol-sfx-val">80</span>
+        </div>
+
+        <div class="setting-separator"></div>
+
+        <div class="setting-row">
+          <label for="sens-mouse">Sensibilidad</label>
+          <input type="range" id="sens-mouse" min="1" max="100" value="36" />
+          <span class="vol-value" id="sens-mouse-val">36</span>
+        </div>
+
+        <div class="setting-separator"></div>
+
+        <div class="setting-row">
+          <label for="crosshair-size">Tamaño de mira</label>
+          <input type="range" id="crosshair-size" min="10" max="60" value="20" />
+          <span class="vol-value" id="crosshair-size-val">20</span>
+        </div>
+
+        <div class="setting-row">
+          <label for="crosshair-color">Color de mira</label>
+          <input type="color" id="crosshair-color" value="#ffffff" />
+        </div>
+
+        <button id="btn-back">← &nbsp;Volver</button>
+      </div>
+
+    </div>
+
+    <script type="module" src="src/main.js"></script>
+  </body>
+</html>

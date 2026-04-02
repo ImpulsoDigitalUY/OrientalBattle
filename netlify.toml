@@ -1,0 +1,13 @@
+[build]
+  publish = "."
+  command = ""
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    # Permite que el navegador use Pointer Lock y fullscreen desde Netlify
+    Permissions-Policy = "fullscreen=*, pointer-lock=*"
+    # Cabeceras de seguridad básicas
+    X-Frame-Options = "DENY"
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"

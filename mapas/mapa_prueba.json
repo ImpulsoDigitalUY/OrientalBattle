@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "name": "mapa_prueba",
+  "floor": {
+    "width": 120,
+    "depth": 120,
+    "color": "#3d6b40"
+  },
+  "objects": [],
+  "spawnPoints": [
+    { "id": "spawn_1", "x": 0,   "z": 0  },
+    { "id": "spawn_2", "x": 14,  "z": 2  },
+    { "id": "spawn_3", "x": -14, "z": 3  },
+    { "id": "spawn_4", "x": 2,   "z": 14 },
+    { "id": "spawn_5", "x": -2,  "z": -14}
+  ]
+}
