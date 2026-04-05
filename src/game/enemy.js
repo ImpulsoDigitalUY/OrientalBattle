@@ -7,7 +7,7 @@
 import * as THREE from 'three';
 import { EYE_HEIGHT } from '../engine/camera.js';
 import { WeaponModel } from './weaponModel.js';
-import { playGunshot } from './audioManager.js';
+import { playGunshot, playWeaponSound } from './audioManager.js';
 import { MinecraftModel } from './minecraftModel.js';
 
 const HP_MAX = 100;
@@ -119,6 +119,12 @@ export class Enemy {
     // El WeaponModel se adjunta directamente al brazo derecho
     this._weaponModel = new WeaponModel(this._weaponDef, this._armGroupR, { fps: false });
     this._gunGroup    = this._weaponModel?.group ?? null;
+  }
+
+  _playWeaponSound() {
+    const shotUrl = this._weaponDef?.sounds?.shot;
+    if (shotUrl) playWeaponSound(shotUrl);
+    else playGunshot();
   }
 
   // ─── Pose de apuntar (brazo derecho extendido) ────────────────────────
@@ -413,7 +419,7 @@ export class Enemy {
           if (this._fireTimer <= 0) {
             this._fireTimer = FIRE_RATE * 1.3; // más lento mientras corre
             damageToPlayer  = this._weaponDmg.torso;
-            playGunshot();
+            this._playWeaponSound();
             this._weaponModel.triggerFlash();
             this._armKick = 1.0;
             shotFired = true;
@@ -445,7 +451,7 @@ export class Enemy {
           if (this._fireTimer <= 0) {
             this._fireTimer = FIRE_RATE;
             damageToPlayer  = this._weaponDmg.torso;
-            playGunshot();
+            this._playWeaponSound();
             this._weaponModel.triggerFlash();
             this._armKick = 1.0;
             shotFired = true;

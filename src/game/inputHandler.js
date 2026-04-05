@@ -27,6 +27,9 @@ let _reloadPressed = false;
 /** 1 o 2 — slot de arma seleccionado; -1 si no hubo cambio este frame */
 let _weaponSlotChange = -1;
 
+/** true durante un único frame cuando se pulsó B (menú de compra) */
+let _buyMenuPressed = false;
+
 /** @type {HTMLCanvasElement | null} */
 let _canvas = null;
 
@@ -46,6 +49,9 @@ function onKeyDown(e) {
   }
   if (e.code === 'Digit2' && document.pointerLockElement === _canvas) {
     _weaponSlotChange = 2;
+  }
+  if (e.code === 'KeyB' && document.pointerLockElement === _canvas) {
+    _buyMenuPressed = true;
   }
 
   // Mientras el juego tiene el puntero capturado, bloquear atajos del navegador
@@ -143,6 +149,23 @@ export function consumeWeaponSlot() {
   const s = _weaponSlotChange;
   _weaponSlotChange = -1;
   return s;
+}
+
+/**
+ * Devuelve true si se pulsó B este frame y lo consume.
+ * @returns {boolean}
+ */
+export function consumeBuyMenu() {
+  if (_buyMenuPressed) { _buyMenuPressed = false; return true; }
+  return false;
+}
+
+/**
+ * Descarta cualquier disparo pendiente (llamar al cambiar de arma
+ * para evitar que un arma semi-auto dispare sola al equiparse).
+ */
+export function flushShot() {
+  _shotFired = false;
 }
 
 /**

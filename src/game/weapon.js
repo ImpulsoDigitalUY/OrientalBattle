@@ -6,6 +6,7 @@
 
 import * as THREE from 'three';
 import { WeaponModel } from './weaponModel.js';
+import { playWeaponSound, playGunshot } from './audioManager.js';
 
 const SWAY_SPEED = 8;
 const SWAY_MAX   = 0.06;
@@ -56,6 +57,8 @@ export class Weapon {
   get isAutomatic()    { return this._automatic; }
   get isEmpty()        { return this.ammo <= 0; }
   get name()           { return this._def?.name ?? ''; }
+  /** Cantidad de pitch (radianes hacia arriba) aplicada a la cámara al disparar */
+  get recoilPitch()    { return this._def?.recoil?.camera ?? 0.02; }
   /** Progreso de la recarga de 0 a 1 */
   get reloadProgress() { return this._isReloading ? this._wm.reloadProgress ?? 0 : 0; }
 
@@ -67,16 +70,21 @@ export class Weapon {
     this._recoilRot    = this._recoilKick;
     this._recoilZ      = this._recoilBack;
     this._wm.triggerFlash();
+    const shotUrl = this._def.sounds?.shot;
+    if (shotUrl) playWeaponSound(shotUrl);
+    else playGunshot();
     return true;
   }
 
   /** Inicia la recarga si hay municion en reserva y el cargador no esta lleno. */
   reload() {
     if (this._isReloading) return;
-    if (this.reserveAmmo <= 0) return;
+    if (this.reserveAmmo !== Infinity && this.reserveAmmo <= 0) return;
     if (this.ammo >= this._magSize) return;
     this._isReloading = true;
     this._wm.startReload(this._reloadTime);
+    const reloadUrl = this._def.sounds?.reload;
+    if (reloadUrl) playWeaponSound(reloadUrl);
   }
 
   update(dt, dx, dy) {
@@ -89,9 +97,9 @@ export class Weapon {
       if (!this._wm.isReloading) {
         // Completar recarga
         const needed = this._magSize - this.ammo;
-        const give   = Math.min(needed, this.reserveAmmo);
-        this.ammo        += give;
-        this.reserveAmmo -= give;
+        const give   = needed;
+        this.ammo   += give;
+        if (this.reserveAmmo !== Infinity) this.reserveAmmo -= give;
         this._isReloading = false;
       }
     }

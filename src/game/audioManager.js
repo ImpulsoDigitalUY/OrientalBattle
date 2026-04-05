@@ -1,10 +1,66 @@
 /**
  * audioManager.js
  * Síntesis procedural de sonidos usando Web Audio API.
- * No requiere ningún archivo de audio externo.
+ * También soporta reproducción de archivos de audio externos.
  */
 
 let _ctx = null;
+
+// ─── Caché de buffers de audio externos ──────────────────────────────────────
+/** @type {Map<string, AudioBuffer>} */
+const _bufCache   = new Map();
+/** @type {Map<string, Promise<AudioBuffer>>} */
+const _bufFetches = new Map();
+
+/**
+ * Carga y reproduce un sonido desde una URL (MP3, OGG, etc.).
+ * Los buffers se cachean tras la primera carga.
+ * @param {string} url
+ */
+export function playWeaponSound(url) {
+  if (!url) return;
+  const ctx = getCtx();
+  const out = getOut();
+
+  const cached = _bufCache.get(url);
+  if (cached) {
+    const src = ctx.createBufferSource();
+    src.buffer = cached;
+    src.connect(out);
+    src.start();
+    return;
+  }
+
+  // Evitar peticiones duplicadas mientras el archivo todavía se carga
+  let pending = _bufFetches.get(url);
+  if (!pending) {
+    pending = fetch(url)
+      .then(r => {
+        if (!r.ok) throw new Error(`HTTP ${r.status}`);
+        return r.arrayBuffer();
+      })
+      .then(ab => ctx.decodeAudioData(ab))
+      .then(buf => {
+        _bufCache.set(url, buf);
+        _bufFetches.delete(url);
+        return buf;
+      })
+      .catch(err => {
+        console.warn('[audioManager] No se pudo cargar sonido:', url, err);
+        _bufFetches.delete(url);
+        return null;
+      });
+    _bufFetches.set(url, pending);
+  }
+
+  pending.then(buf => {
+    if (!buf) return;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(out);
+    src.start();
+  });
+}
 
 /** Nodo maestro de ganancia (controla el volumen global) */
 let _masterGain = null;

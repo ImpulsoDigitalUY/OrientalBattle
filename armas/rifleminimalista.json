@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "name": "rifleminimalista",
+  "slot": "primary",
+  "damage": {
+    "head": 100,
+    "torso": 35,
+    "limb": 25
+  },
+  "fireRate": 15,
+  "automatic": true,
+  "magazineSize": 30,
+  "reserveAmmo": 90,
+  "reloadTime": 2.2,
+  "recoil": {
+    "kick": 0.18,
+    "back": 0.01,
+    "speed": 16,
+    "camera": 0.015
+  },
+  "muzzlePoint": {
+    "x": 0,
+    "y": 0,
+    "z": -0.5
+  },
+  "magazineBlockId": "b3",
+  "fpsPosOffset": {
+    "x": 0.16,
+    "y": -0.14,
+    "z": -0.3
+  },
+  "botPosOffset": {
+    "x": 0,
+    "y": -0.46,
+    "z": -0.14
+  },
+  "botRotOffset": {
+    "x": -0.18,
+    "y": 0,
+    "z": 0
+  },
+  "sounds": {
+    "shot": "assets/sounds/armas/rifleminimalista_shot.mp3",
+    "reload": "assets/sounds/armas/rifleminimalista_reload.mp3"
+  },
+  "blocks": [
+    {
+      "id": "b1",
+      "x": 0,
+      "y": 0.03,
+      "z": -0.08,
+      "w": 0.065,
+      "h": 0.07,
+      "d": 0.5,
+      "color": "#545454",
+      "magazine": false
+    },
+    {
+      "id": "b2",
+      "x": 0,
+      "y": -0.04,
+      "z": 0.09,
+      "w": 0.065,
+      "h": 0.1,
+      "d": 0.07,
+      "color": "#2c2c2c",
+      "magazine": false
+    },
+    {
+      "id": "b3",
+      "x": 0,
+      "y": -0.08,
+      "z": -0.11,
+      "w": 0.065,
+      "h": 0.15,
+      "d": 0.07,
+      "color": "#2c2c2c",
+      "magazine": true
+    }
+  ]
+}

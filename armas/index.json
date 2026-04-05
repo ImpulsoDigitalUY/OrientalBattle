@@ -1,3 +1,4 @@
 [
-  { "id": "pistol", "name": "Pistol", "file": "armas/pistol.json" }
+  { "id": "pistol", "name": "Pistol", "file": "armas/pistol.json" },
+  { "id": "rifleminimalista", "name": "Rifle Minimalista", "file": "armas/rifleminimalista.json" }
 ]

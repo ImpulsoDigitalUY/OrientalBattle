@@ -14,9 +14,10 @@ import { initInput, setGameReady }       from './game/inputHandler.js';
 import { Player, setSensitivity }          from './game/player.js';
 import { CollisionWorld }  from './game/collisions.js';
 import { Weapon }          from './game/weapon.js';
-import { consumeShot, isMouseHeld, consumeReload, consumeWeaponSlot } from './game/inputHandler.js';
+import { consumeShot, isMouseHeld, consumeReload, consumeWeaponSlot, consumeBuyMenu, flushShot } from './game/inputHandler.js';
 import { WeaponEditor }   from './dev/weaponEditor.js';
-import { playGunshot, playHitMark, setMasterVolume, setSfxVolume } from './game/audioManager.js';
+import { BuyMenu } from './game/buyMenu.js';
+import { playHitMark, setMasterVolume, setSfxVolume } from './game/audioManager.js';
 import { Enemy }           from './game/enemy.js';
 import { HitSystem }       from './game/hitSystem.js';
 import { DeathmatchManager, pickSpawn, SPAWN_POINTS } from './game/deathmatch.js';
@@ -96,7 +97,7 @@ const hudAmmoName   = document.getElementById('hud-ammo-name');
 function updateAmmoHud() {
   if (!weapon) return;
   hudAmmoCur.textContent  = weapon.ammo;
-  hudAmmoRes.textContent  = weapon.reserveAmmo;
+  hudAmmoRes.textContent  = weapon.reserveAmmo === Infinity ? '∞' : weapon.reserveAmmo;
   hudAmmoName.textContent = weapon.name ?? '';
   const reloadPct = weapon.isReloading ? weapon.reloadProgress * 100 : 0;
   hudReloadFill.style.width = `${reloadPct}%`;
@@ -171,6 +172,11 @@ let enemies         = [];
 let gameInitialized = false;
 /** Definiciones de armas cargadas desde armas/index.json. Clave = id */
 let _weaponDefs     = {};
+/** Menú de compra */
+let _buyMenu        = null;
+/** Pickups de vida en la escena: Array<{mesh:THREE.Mesh, x, z, active}> */
+let _healthPickups  = [];
+const PICKUP_RADIUS = 1.2;  // distancia para recoger el pickup
 
 // ─── Iluminación ─────────────────────────────────────────────────────────────
 
@@ -195,6 +201,8 @@ document.addEventListener('pointerlockchange', () => {
   const locked = document.pointerLockElement === canvas;
   overlay.style.display  = locked ? 'none' : 'flex';
   crosshair.classList.toggle('visible', locked);
+  // Cerrar menú de compra al volver al juego
+  if (locked) _buyMenu?.close();
   if (!locked && gameStarted) {
     menuMain.classList.remove('hidden');
     menuSettings.classList.add('hidden');
@@ -418,16 +426,37 @@ function loop() {
   updateHpHud();
   updateAmmoHud();
 
+  // Menú de compra (tecla B)
+  if (consumeBuyMenu() && gameStarted && deathmatch.state !== 'over') {
+    _buyMenu?.toggle();
+  }
+
+  // Pickups de vida: detectar si el jugador está encima
+  if (!player.isDead) {
+    for (const pk of _healthPickups) {
+      if (!pk.active) continue;
+      const dx = player.position.x - pk.x;
+      const dz = player.position.z - pk.z;
+      if (Math.sqrt(dx * dx + dz * dz) < PICKUP_RADIUS) {
+        pk.active = false;
+        pk.mesh.visible = false;
+        player.hp = player.maxHp;
+      }
+    }
+  }
+
   // Cambio de slot (teclas 1 / 2)
   const slotSwitch = consumeWeaponSlot();
   if (slotSwitch === 1 && primaryWeapon && weapon !== primaryWeapon) {
     weapon?.group?.parent && (weapon.group.visible = false);
     weapon = primaryWeapon;
     weapon.group.visible = true;
+    flushShot();
   } else if (slotSwitch === 2 && secondaryWeapon && weapon !== secondaryWeapon) {
     weapon?.group?.parent && (weapon.group.visible = false);
     weapon = secondaryWeapon;
     weapon.group.visible = true;
+    flushShot();
   }
 
   // Deathmatch: actualizar timers de partida y reapariciones
@@ -459,7 +488,9 @@ function loop() {
     // Disparo: semi-auto = consumeShot(), automático = isMouseHeld() cada frame
     const shouldShoot = weapon?.isAutomatic ? isMouseHeld() : consumeShot();
     if (shouldShoot && weapon?.shoot()) {
-      playGunshot();
+      // El sonido de disparo lo gestiona weapon.shoot() internamente
+      // Recoil de cámara: subir la mira (pitch positivo = mirar hacia arriba en este motor)
+      player.pitch = Math.min(Math.PI * 0.48, player.pitch + (weapon.recoilPitch ?? 0));
 
       const hit = hitSystem.cast(enemies);
       if (hit) {
@@ -478,7 +509,11 @@ function loop() {
         // Registrar kill de deathmatch
         if (result.isDead && result.damage > 0) {
           const idx = enemies.indexOf(enemy);
-          if (idx !== -1) deathmatch.reportEnemyKilled(idx);
+          if (idx !== -1) {
+            deathmatch.reportEnemyKilled(idx);
+            // Soltar pickup de vida en la posición del enemigo
+            _spawnHealthPickup(enemy.root.position.x, enemy.root.position.z);
+          }
         }
       }
     }
@@ -559,6 +594,23 @@ function loop() {
   }
   hitSystem.update(dt);
 
+  // Animar pickups de vida (flota suavemente + desaparece tras 10 s)
+  for (const pk of _healthPickups) {
+    if (!pk.active) continue;
+    pk._t = (pk._t ?? 0) + dt;
+    pk.mesh.position.y  = 0.3 + Math.sin(pk._t * 2.5) * 0.1;
+    pk.mesh.rotation.y += dt * 1.5;
+    // Fade en los últimos 3 segundos
+    const LIFETIME = 10;
+    const FADE_START = 7;
+    if (pk._t >= LIFETIME) {
+      pk.active = false;
+      pk.mesh.visible = false;
+    } else if (pk._t >= FADE_START) {
+      pk.mesh.material.opacity = 1 - (pk._t - FADE_START) / (LIFETIME - FADE_START);
+    }
+  }
+
   // Actualizar ambas armas (para que sway/recoil sigan aunque no estén activas brevemente)
   primaryWeapon?.update(dt, player.lastMouseDelta.x, player.lastMouseDelta.y);
   if (secondaryWeapon !== primaryWeapon) {
@@ -583,6 +635,13 @@ function initGame(mapData) {
   const toRemove = scene.children.filter(c => c.userData.gameObject);
   for (const obj of toRemove) scene.remove(obj);
 
+  // Limpiar pickups de partida anterior
+  _healthPickups = [];
+
+  // Destruir menú de compra anterior si existe
+  _buyMenu?.destroy();
+  _buyMenu = null;
+
   collisionWorld = new CollisionWorld();
   player         = new Player(camera, collisionWorld);
 
@@ -596,8 +655,43 @@ function initGame(mapData) {
   secondaryWeapon = secondaryDef ? new Weapon(camera, secondaryDef) : null;
   weapon = primaryWeapon ?? secondaryWeapon;
 
+  // En deathmatch la munición de reserva es infinita
+  if (primaryWeapon)   primaryWeapon.reserveAmmo   = Infinity;
+  if (secondaryWeapon) secondaryWeapon.reserveAmmo = Infinity;
+
   // Ocultar el grupo del arma no activa
   if (primaryWeapon && secondaryWeapon) secondaryWeapon.group.visible = false;
+
+  // Menú de compra (dinero siempre Infinity en deathmatch)
+  const buyEntries = Object.entries(_weaponDefs).map(([id, def]) => ({ id, def }));
+  _buyMenu = new BuyMenu(
+    buyEntries,
+    () => Infinity,
+    (id) => {
+      const def = _weaponDefs[id];
+      if (!def) return;
+      const newWeapon = new Weapon(camera, def);
+      newWeapon.reserveAmmo = Infinity;
+      if (def.slot === 'primary') {
+        // Quitar arma primaria anterior de la escena si la había
+        if (primaryWeapon) {
+          primaryWeapon.group.parent?.remove(primaryWeapon.group);
+        }
+        primaryWeapon = newWeapon;
+      } else {
+        if (secondaryWeapon) {
+          secondaryWeapon.group.parent?.remove(secondaryWeapon.group);
+        }
+        secondaryWeapon = newWeapon;
+      }
+      // Activar la nueva arma
+      if (weapon?.group) weapon.group.visible = false;
+      weapon = newWeapon;
+      weapon.group.visible = true;
+      // Re-bloquear puntero para volver al juego
+      canvas.requestPointerLock();
+    },
+  );
 
   hitSystem      = new HitSystem(scene, camera);
   enemies        = [];
@@ -653,6 +747,27 @@ function initGame(mapData) {
   };
 
   gameInitialized = true;
+}
+
+/**
+ * Crea un pickup de vida (esfera verde) en (x, z).
+ * @param {number} x
+ * @param {number} z
+ */
+function _spawnHealthPickup(x, z) {
+  const geo  = new THREE.SphereGeometry(0.22, 10, 10);
+  const mat  = new THREE.MeshLambertMaterial({
+    color: 0x00dd44,
+    emissive: new THREE.Color(0x004414),
+    emissiveIntensity: 0.6,
+    transparent: true,
+    opacity: 1,
+  });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.set(x, 0.3, z);
+  mesh.userData.gameObject = true;
+  scene.add(mesh);
+  _healthPickups.push({ mesh, x, z, active: true, _t: 0 });
 }
 
 /**

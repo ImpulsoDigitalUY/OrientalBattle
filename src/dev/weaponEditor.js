@@ -26,10 +26,14 @@ export class WeaponEditor {
     this.magazineSize = 30;
     this.reserveAmmo  = 90;
     this.reloadTime   = 2.2;
-    this.recoil       = { kick: 0.18, back: 0.01, speed: 16 };
+    this.recoil       = { kick: 0.18, back: 0.01, speed: 16, camera: 0.02 };
+    this.price        = 500;
 
     // Posición del muzzle (punto de chispa) — se edita con herramienta M
     this.muzzlePoint  = { x: 0, y: 0, z: -0.5 };
+
+    // Sonidos
+    this.sounds       = { shot: '', reload: '' };
 
     // Offsets FPS / bot
     this.fpsPosOffset = { x: 0.16, y: -0.14, z: -0.30 };
@@ -647,6 +651,15 @@ export class WeaponEditor {
     return row;
   }
 
+  _textRow(label, value, placeholder, onChange) {
+    const row = this._row(label);
+    const inp = this._inp('text', value, 'width:118px;font-size:11px;');
+    if (placeholder) inp.placeholder = placeholder;
+    inp.addEventListener('change', () => onChange(inp.value.trim()));
+    row.appendChild(inp);
+    return row;
+  }
+
   _colorRow(label, value, onChange) {
     const row = this._row(label);
     const inp = document.createElement('input');
@@ -795,18 +808,25 @@ export class WeaponEditor {
     panel.appendChild(this._numRow('Tamaño cargador', this.magazineSize, 1, 200, 1, v => this.magazineSize = v).row);
     panel.appendChild(this._numRow('Reserva inicial', this.reserveAmmo,  1, 600, 1, v => this.reserveAmmo  = v).row);
     panel.appendChild(this._numRow('Tiempo recarga (s)', this.reloadTime, 0.2, 10, 0.1, v => this.reloadTime = v).row);
+    panel.appendChild(this._numRow('Precio ($)', this.price, 0, 99999, 50, v => this.price = v).row);
 
     panel.appendChild(this._sep());
     panel.appendChild(this._label('Retroceso'));
-    panel.appendChild(this._numRow('Kick (rot)',   this.recoil.kick,  0, 1,   0.01, v => this.recoil.kick  = v).row);
-    panel.appendChild(this._numRow('Back (pos Z)', this.recoil.back,  0, 0.1, 0.001, v => this.recoil.back = v).row);
-    panel.appendChild(this._numRow('Velocidad',    this.recoil.speed, 1, 50,  1,    v => this.recoil.speed = v).row);
+    panel.appendChild(this._numRow('Kick (rot)',    this.recoil.kick,   0, 1,    0.01,  v => this.recoil.kick   = v).row);
+    panel.appendChild(this._numRow('Back (pos Z)',  this.recoil.back,   0, 0.1,  0.001, v => this.recoil.back   = v).row);
+    panel.appendChild(this._numRow('Velocidad',     this.recoil.speed,  1, 50,   1,     v => this.recoil.speed  = v).row);
+    panel.appendChild(this._numRow('Cámara (rad)',  this.recoil.camera, 0, 0.2,  0.001, v => this.recoil.camera = v).row);
 
     panel.appendChild(this._sep());
     panel.appendChild(this._label('Offset FPS (cámara)'));
     panel.appendChild(this._numRow('X', this.fpsPosOffset.x, -2, 2, 0.01, v => this.fpsPosOffset.x = v).row);
     panel.appendChild(this._numRow('Y', this.fpsPosOffset.y, -2, 2, 0.01, v => this.fpsPosOffset.y = v).row);
     panel.appendChild(this._numRow('Z', this.fpsPosOffset.z, -2, 2, 0.01, v => this.fpsPosOffset.z = v).row);
+
+    panel.appendChild(this._sep());
+    panel.appendChild(this._label('Sonidos'));
+    panel.appendChild(this._textRow('Disparo',  this.sounds.shot,   'assets/sounds/armas/shot.mp3',   v => this.sounds.shot   = v));
+    panel.appendChild(this._textRow('Recarga',  this.sounds.reload, 'assets/sounds/armas/reload.mp3', v => this.sounds.reload = v));
   }
 
   _updateToolButtons() {
@@ -956,11 +976,13 @@ export class WeaponEditor {
       reserveAmmo:  this.reserveAmmo,
       reloadTime:   this.reloadTime,
       recoil:       { ...this.recoil },
+      price:        this.price,
       muzzlePoint:  { ...this.muzzlePoint },
       magazineBlockId: magBlock?.id ?? null,
       fpsPosOffset: { ...this.fpsPosOffset },
       botPosOffset: { ...this.botPosOffset },
       botRotOffset: { ...this.botRotOffset },
+      sounds:       { ...this.sounds },
       blocks:       this.blocks.map(b => ({ ...b })),
     };
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -982,11 +1004,14 @@ export class WeaponEditor {
     this.magazineSize = data.magazineSize ?? 30;
     this.reserveAmmo  = data.reserveAmmo  ?? 90;
     this.reloadTime   = data.reloadTime   ?? 2.2;
-    this.recoil       = { ...(data.recoil ?? { kick: 0.18, back: 0.01, speed: 16 }) };
+    this.recoil       = { ...(data.recoil ?? { kick: 0.18, back: 0.01, speed: 16, camera: 0.02 }) };
+    if (this.recoil.camera == null) this.recoil.camera = 0.02;
+    this.price        = data.price        ?? 500;
     this.muzzlePoint  = { ...(data.muzzlePoint ?? { x: 0, y: 0, z: -0.5 }) };
     this.fpsPosOffset = { ...(data.fpsPosOffset ?? { x: 0.16, y: -0.14, z: -0.30 }) };
     this.botPosOffset = { ...(data.botPosOffset ?? { x: 0.0, y: -0.46, z: -0.14 }) };
     this.botRotOffset = { ...(data.botRotOffset ?? { x: -0.18, y: 0, z: 0 }) };
+    this.sounds       = { shot: data.sounds?.shot ?? '', reload: data.sounds?.reload ?? '' };
     this.blocks       = (data.blocks ?? []).map(b => ({ ...b }));
 
     this._nextId = 1;
